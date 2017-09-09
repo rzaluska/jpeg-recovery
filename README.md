@@ -1,6 +1,7 @@
 # JPEG File Recovery tool
 
-This program is able to restore JPEG files after accidental remove or partition format.
+This program is able to restore JPEG files after their accidental remove
+or partition format.
 
 ## Install
 
