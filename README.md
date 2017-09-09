@@ -10,7 +10,7 @@ go get -u https://github.com/rzaluska/jpeg-recovery
 
 ## Usage
 
-### From image file
+### Recover from image file
 ```sh
 jpeg-recovery -f discImage.img
 ```
@@ -18,7 +18,7 @@ jpeg-recovery -f discImage.img
 JPEG files will be saved to the current directory.
 
 
-### Directly from device
+### Recover directly from device
 
 ```
 jpeg-recovery -f /dev/sda
