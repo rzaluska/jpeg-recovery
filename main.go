@@ -48,21 +48,12 @@ func main() {
 	cluserSize := *blockSize
 
 	for {
-		cluster := make([]byte, cluserSize)
-		n, err := f.Read(cluster)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err)
-		}
-		if n < cluserSize {
-			break
-		}
-
 		cluserReader := NewCounterReader(f)
 		_, err = jpeg.Decode(cluserReader)
 		if err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				break
+			}
 			address += cluserSize
 			f.Seek(int64(address), os.SEEK_SET)
 		} else {
@@ -70,7 +61,7 @@ func main() {
 
 			partOfCluster := cluserReader.Counter - numWholeClusters*cluserSize
 
-			if partOfCluster != 0 {
+			if partOfCluster > 0 {
 				numWholeClusters++
 			}
 
@@ -79,7 +70,7 @@ func main() {
 				panic(err)
 			}
 
-			f.Seek(-int64(cluserReader.Counter), os.SEEK_CUR)
+			f.Seek(int64(address), os.SEEK_SET)
 
 			_, err = io.CopyN(outFile, f, int64(cluserReader.Counter))
 
@@ -92,7 +83,7 @@ func main() {
 			address += numWholeClusters * cluserSize
 
 			f.Seek(int64(address), os.SEEK_SET)
-			fmt.Printf("At 0x%x: Jpeg recovery success! File size %d, num cluster %d\n", address, cluserReader.Counter, numWholeClusters)
+			fmt.Printf("JPEG found at 0x%x. Size: %d bytes; Num clusters: %d\n", address, cluserReader.Counter, numWholeClusters)
 		}
 	}
 }
