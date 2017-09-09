@@ -64,8 +64,7 @@ func main() {
 		_, err = jpeg.Decode(cluserReader)
 		if err != nil {
 			address += cluserSize
-			f.Seek(int64(address), 0)
-			//fmt.Printf("At 0x%x: Jpeg recovery failed!\n", address)
+			f.Seek(int64(address), os.SEEK_SET)
 		} else {
 			numWholeClusters := cluserReader.Counter / cluserSize
 
@@ -80,7 +79,7 @@ func main() {
 				panic(err)
 			}
 
-			f.Seek(-int64(cluserReader.Counter), 1)
+			f.Seek(-int64(cluserReader.Counter), os.SEEK_CUR)
 
 			_, err = io.CopyN(outFile, f, int64(cluserReader.Counter))
 
@@ -92,7 +91,7 @@ func main() {
 
 			address += numWholeClusters * cluserSize
 
-			f.Seek(int64(address), 0)
+			f.Seek(int64(address), os.SEEK_SET)
 			fmt.Printf("At 0x%x: Jpeg recovery success! File size %d, num cluster %d\n", address, cluserReader.Counter, numWholeClusters)
 		}
 	}
