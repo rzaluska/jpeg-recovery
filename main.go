@@ -11,7 +11,7 @@ import (
 
 type CounterReader struct {
 	r       io.Reader
-	Counter int
+	Counter int64
 }
 
 func NewCounterReader(r io.Reader) *CounterReader {
@@ -23,67 +23,95 @@ func NewCounterReader(r io.Reader) *CounterReader {
 
 func (cr *CounterReader) Read(b []byte) (n int, err error) {
 	n, err = cr.r.Read(b)
-	cr.Counter += n
+	cr.Counter += int64(n)
 	return
 }
 
 func main() {
 	inputFileName := flag.String("f", "", "Input file name")
-	blockSize := flag.Int("b", 512, "Size of block (cluster) of allocation")
+	blockSize := flag.Int64("b", 512, "Size of block (cluster) of allocation")
+	verbose := flag.Bool("v", false, "Verbose output")
+
 	flag.Parse()
 
 	if *inputFileName == "" {
-		fmt.Printf("Usage:\n%s -f inputfile [-b blockSize]\n", os.Args[0])
+		fmt.Printf("Usage:\n%s -f inputfile [-v -b blockSize]\n", os.Args[0])
 		return
 	}
 
-	f, err := os.Open(*inputFileName)
+	inputFile, err := os.Open(*inputFileName)
 	if err != nil {
-		panic("Can't open input file")
+		fmt.Printf("Can't open input file: %s\n", err)
+		os.Exit(1)
 	}
-	defer f.Close()
+	defer func() {
+		err := inputFile.Close()
+		if err != nil {
+			fmt.Printf("Can't close input file: %s\n", err)
+			os.Exit(1)
+		}
+	}()
 
-	address := 0
-
-	cluserSize := *blockSize
+	address := int64(0)
 
 	for {
-		cluserReader := NewCounterReader(f)
-		_, err = jpeg.Decode(cluserReader)
+		counterReader := NewCounterReader(inputFile)
+		_, err = jpeg.Decode(counterReader)
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			}
-			address += cluserSize
-			f.Seek(int64(address), os.SEEK_SET)
+			address += *blockSize
+			_, err := inputFile.Seek(address, io.SeekStart)
+			if err != nil {
+				fmt.Printf("Can't seek to next cluster: %s\n", err)
+				os.Exit(1)
+			}
 		} else {
-			numWholeClusters := cluserReader.Counter / cluserSize
+			numWholeClusters := counterReader.Counter / (*blockSize)
 
-			partOfCluster := cluserReader.Counter - numWholeClusters*cluserSize
+			partOfCluster := counterReader.Counter - numWholeClusters*(*blockSize)
 
 			if partOfCluster > 0 {
 				numWholeClusters++
 			}
 
-			outFile, err := os.Create(strconv.Itoa(address) + ".jpg")
+			outFile, err := os.Create(strconv.FormatInt(address, 10) + ".jpg")
 			if err != nil {
 				panic(err)
 			}
 
-			f.Seek(int64(address), os.SEEK_SET)
-
-			_, err = io.CopyN(outFile, f, int64(cluserReader.Counter))
-
+			_, err = inputFile.Seek(address, io.SeekStart)
 			if err != nil {
-				panic(err)
+				fmt.Printf("Can't seek back to file start cluster: %s\n", err)
+				os.Exit(1)
 			}
 
-			outFile.Close()
+			_, err = io.CopyN(outFile, inputFile, int64(counterReader.Counter))
 
-			address += numWholeClusters * cluserSize
+			if err != nil {
+				fmt.Printf("Can't save JPEG data to file: %s\n", err)
+				os.Exit(1)
+			}
 
-			f.Seek(int64(address), os.SEEK_SET)
-			fmt.Printf("JPEG found at 0x%x. Size: %d bytes; Num clusters: %d\n", address, cluserReader.Counter, numWholeClusters)
+			err = outFile.Close()
+			if err != nil {
+				fmt.Printf("Can't close JPEG file: %s\n", err)
+				os.Exit(1)
+			}
+
+			if *verbose {
+				fmt.Printf("JPEG file found at address 0x%x. Size: %d bytes; Num clusters: %d\n", address, counterReader.Counter, numWholeClusters)
+				os.Exit(1)
+			}
+
+			address += numWholeClusters * (*blockSize)
+
+			_, err = inputFile.Seek(address, io.SeekStart)
+			if err != nil {
+				fmt.Printf("Can't seek to next cluster: %s\n", err)
+				os.Exit(1)
+			}
 		}
 	}
 }
