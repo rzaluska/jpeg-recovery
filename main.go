@@ -29,7 +29,7 @@ func (cr *CounterReader) Read(b []byte) (n int, err error) {
 
 func main() {
 	inputFileName := flag.String("f", "", "Input file name")
-	blockSize := flag.Int64("b", 512, "Size of block (cluster) of allocation")
+	blockSize := flag.Int64("b", 512, "Size of disc block (cluster)")
 	verbose := flag.Bool("v", false, "Verbose output")
 
 	flag.Parse()
@@ -78,7 +78,8 @@ func main() {
 
 			outFile, err := os.Create(strconv.FormatInt(address, 10) + ".jpg")
 			if err != nil {
-				panic(err)
+				fmt.Printf("Can't create JPEG file: %s\n", err)
+				os.Exit(1)
 			}
 
 			_, err = inputFile.Seek(address, io.SeekStart)
