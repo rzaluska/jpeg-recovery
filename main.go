@@ -103,7 +103,6 @@ func main() {
 
 			if *verbose {
 				fmt.Printf("JPEG file found at address 0x%x. Size: %d bytes; Num clusters: %d\n", address, counterReader.Counter, numWholeClusters)
-				os.Exit(1)
 			}
 
 			address += numWholeClusters * (*blockSize)
