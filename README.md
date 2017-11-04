@@ -6,7 +6,7 @@ or partition format.
 ## Install
 
 ```sh
-go get -u https://github.com/zaluska/jpeg-recovery
+go get -u https://github.com/rzaluska/jpeg-recovery
 ```
 
 ## Usage
